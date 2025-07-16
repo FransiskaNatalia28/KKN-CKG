@@ -66,18 +66,6 @@
               <input type="text" class="form-control" name="nama" required>
             </div>
             <div class="mb-3">
-              <label class="form-label">Umur</label>
-              <input type="text" class="form-control" name="umur" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Nomor Telepon</label>
-              <input type="text" class="form-control" name="no" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Alamat</label>
-              <input type="text" class="form-control" name="alamat" required>
-            </div>
-            <div class="mb-3">
               <label class="form-label">Dusun</label>
               <select class="form-select" name="dusun" required>
                 <option value="" disabled selected>Pilih Kategori</option>
@@ -90,20 +78,24 @@
               </select>
             </div>
             <div class="mb-3">
-              <label class="form-label">Jenis Kelamin</label>
-              <select class="form-select" name="gender" required>
-                <option value="" disabled selected>Pilih Kategori</option>
-                <option value="Perempuan">Perempuan</option>
-                <option value="Laki-laki">Laki-Laki</option>
-              </select>
+              <label class="form-label">Berat Badan</label>
+              <input type="text" class="form-control" name="umur" required>
             </div>
             <div class="mb-3">
-              <label class="form-label">Koordinat</label>
-              <input type="text" class="form-control" name="koord" id="koord">
+              <label class="form-label">Tinggi Badan</label>
+              <input type="text" class="form-control" name="no" required>
             </div>
             <div class="mb-3">
-              <label class="form-label">Resiko</label>
-              <input type="text" class="form-control" name="resiko" required>
+              <label class="form-label">Lingkar Pinggang</label>
+              <input type="text" class="form-control" name="alamat" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Tekanan Darah (Sistolik)</label>
+              <input type="text" class="form-control" name="gender" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Tekanan Darah (Diastolik)</label>
+              <input type="text" class="form-control" name="koord" required>
             </div>
             <button type="submit" class="btn btn-primary w-100">Kirim</button>
           </form>
@@ -169,8 +161,7 @@
         alamat: form.alamat.value,
         dusun: form.dusun.value,
         gender: form.gender.value,
-        koord: form.koord.value,
-        resiko: form.resiko.value
+        koord: form.koord.value
       };
 
       fetch("https://script.google.com/macros/s/AKfycbwgGpZE9BAx1PCBtK2QObeQA-6xkZOVlMmt9wcQAQzWuw4Ue3hhramq7sUY65JXG7Z3/exec", {
