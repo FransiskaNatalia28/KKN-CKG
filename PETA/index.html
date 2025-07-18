@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Peta Kesehatan Lansia</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .controls {
+            background: #f8f9fa;
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .control-group label {
+            font-weight: 500;
+            color: #495057;
+        }
+        select, button, input {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .data-upload {
+            background: #f8f9fa;
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .file-upload {
+            background: #e3f2fd;
+            border: 2px dashed #2196F3;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .file-upload:hover {
+            background: #bbdefb;
+            border-color: #1976D2;
+        }
+        .file-upload.dragover {
+            background: #90caf9;
+            border-color: #1565C0;
+        }
+        .file-input { display: none; }
+        .file-label {
+            color: #1976D2;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .file-info { margin-top: 10px; font-size: 14px; color: #666; }
+        .upload-status { margin-top: 10px; font-size: 14px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; padding:10px; border-radius:4px; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; padding:10px; border-radius:4px; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; padding:10px; border-radius:4px; }
+        .data-preview { background:#f8f9fa; border: 1px solid #dee2e6; border-radius:6px; padding:15px; margin-top:15px; max-height:200px; overflow-y:auto; }
+        .data-preview table { width:100%; border-collapse:collapse; font-size:12px; }
+        .data-preview th, .data-preview td { border:1px solid #dee2e6; padding:8px; text-align:left; }
+        .map-container { height:500px; position:relative; }
+        #map { height:100%; }
+        .stats-panel { background:#f8f9fa; padding:20px; border-top:1px solid #e9ecef; }
+        .stats-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:15px; margin-bottom:20px; }
+        .stat-card { background:white; padding:15px; border-radius:8px; border-left:4px solid #007bff; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
+        .stat-title { font-size:12px; color:#6c757d; text-transform:uppercase; margin-bottom:5px; }
+        .stat-value { font-size:24px; font-weight:bold; color:#495057; }
+        .legend { background:white; padding:15px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1); margin-top:15px; }
+        .legend-title { font-weight:bold; margin-bottom:10px; color:#495057; }
+        .legend-item { display:flex; align-items:center; margin-bottom:5px; }
+        .legend-color { width:20px; height:20px; border-radius:3px; margin-right:10px; }
+        .info-panel { position:absolute; top:10px; right:10px; background:white; padding:15px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.15); min-width:200px; z-index:1000; }
+        .leaflet-popup-content-wrapper { border-radius:8px; }
+        .popup-content { font-size:14px; line-height:1.4; }
+        .popup-title { font-weight:bold; color:#495057; margin-bottom:8px; font-size:16px; }
+        .popup-stat { margin-bottom:4px; display:flex; justify-content:space-between; }
+        .popup-stat span:first-child { color:#6c757d; }
+        .popup-stat span:last-child { font-weight:500; color:#495057; }
+        .geojson-layer { opacity: 0.8; }
+        .geojson-layer.highlighted { opacity: 1; }
+        .debug-info { background:#f8f9fa; border:1px solid #dee2e6; padding:10px; margin-top:10px; border-radius:4px; font-size:12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 Peta Kesehatan Lansia - Jawa Timur</h1>
+            <p>Visualisasi data kesehatan lansia berdasarkan wilayah administratif</p>
+        </div>
+
+        <div class="data-upload">
+            <div class="file-upload" id="fileUpload">
+                <label for="csvFile" class="file-label">📁 Klik untuk upload file CSV atau drag & drop di sini</label>
+                <input type="file" id="csvFile" class="file-input" accept=".csv" />
+                <div class="file-info">Format CSV yang didukung: NAMA,DUSUN,BB,TB,LP,SISTOLIK,DIASTOLIK atau nama,dusun,berat_badan,tinggi_badan,tensi_sistolik,tensi_diastolik</div>
+                <div id="uploadStatus"></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="indicator">Indikator:</label>
+                <select id="indicator">
+                    <option value="hypertension">Prevalensi Hipertensi (%)</option>
+                    <option value="avgBMI">Rata-rata BMI</option>
+                    <option value="elderlyCount">Jumlah Lansia</option>
+                    <option value="riskLevel">Tingkat Risiko Kesehatan</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="region">Wilayah:</label>
+                <select id="region">
+                    <option value="all">Semua Wilayah</option>
+                </select>
+            </div>
+            <button onclick="updateMapDisplay()">Perbarui Peta</button>
+            <button onclick="exportData()">Export Data</button>
+            <button onclick="showDebugInfo()">Info Debug</button>
+        </div>
+
+        <div id="dataPreview" class="data-preview" style="display:none;">
+            <h4>Preview Data (10 baris pertama):</h4>
+            <div id="previewTable"></div>
+        </div>
+
+        <div class="map-container">
+            <div id="map"></div>
+            <div class="info-panel">
+                <div class="legend">
+                    <div class="legend-title">Legenda - Prevalensi Hipertensi</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#2E7D32;"></div><span>Rendah (< 30%)</span></div>
+                    <div class="legend-item"><div class="legend-color" style="background:#FBC02D;"></div><span>Sedang (30-50%)</span></div>
+                    <div class="legend-item"><div class="legend-color" style="background:#F57F17;"></div><span>Tinggi (50-70%)</span></div>
+                    <div class="legend-item"><div class="legend-color" style="background:#D32F2F;"></div><span>Sangat Tinggi (> 70%)</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-panel">
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-title">Total Lansia</div><div class="stat-value" id="totalElderly">0</div></div>
+                <div class="stat-card"><div class="stat-title">Rata-rata Hipertensi</div><div class="stat-value" id="avgHypertension">0%</div></div>
+                <div class="stat-card"><div class="stat-title">Rata-rata BMI</div><div class="stat-value" id="avgBMIStat">0</div></div>
+                <div class="stat-card"><div class="stat-title">Wilayah Risiko Tinggi</div><div class="stat-value" id="highRiskRegions">0</div></div>
+                <div class="stat-card"><div class="stat-title">Dusun Terpetakan</div><div class="stat-value" id="mappedVillages">0</div></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let map;
+        let geojsonLayer;
+        let csvData = [];
+        let processedData = {};
+        let geojsonData = null;
+        let villagePolygons = {};
+        let availableVillages = [];
+
+        // Initialize map
+        function initMap() {
+            map = L.map('map').setView([-7.9666, 112.6326], 10);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Load GeoJSON if available
+            loadGeoJSON();
+        }
+
+        // Load GeoJSON data
+        function loadGeoJSON() {
+            fetch("dusun.geojson")
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(geojson => {
+                    geojsonData = geojson;
+                    
+                    // Create initial geojson layer
+                    geojsonLayer = L.geoJSON(geojson, {
+                        className: 'geojson-layer',
+                        style: {
+                            color: "#3388ff",
+                            weight: 2,
+                            fillOpacity: 0.2,
+                            fillColor: "#3388ff"
+                        },
+                        onEachFeature: (feature, layer) => {
+                            // Use NAMOBJ field as specified
+                            const dusunName = feature.properties.NAMOBJ || feature.properties.namobj || feature.properties.NAME || 'Nama tidak tersedia';
+                            
+                            // Store polygon reference
+                            villagePolygons[dusunName] = layer;
+                            availableVillages.push(dusunName);
+                            
+                            layer.bindPopup(`
+                                <div class='popup-content'>
+                                    <div class='popup-title'>${dusunName}</div>
+                                    <div class='popup-stat'><span>Status:</span><span>Belum ada data kesehatan</span></div>
+                                </div>
+                            `);
+                        }
+                    }).addTo(map);
+                    
+                    map.fitBounds(geojsonLayer.getBounds());
+                    
+                    // Update region dropdown with GeoJSON data
+                    updateRegionDropdownFromGeoJSON();
+                    
+                    console.log('GeoJSON loaded successfully. Available villages:', availableVillages);
+                })
+                .catch(error => {
+                    console.error('Error loading GeoJSON:', error);
+                    alert('GeoJSON file tidak ditemukan. Silakan pastikan file dusun.geojson tersedia.');
+                });
+        }
+
+        // Update region dropdown from GeoJSON
+        function updateRegionDropdownFromGeoJSON() {
+            const select = document.getElementById('region');
+            select.innerHTML = '<option value="all">Semua Wilayah</option>';
+            
+            if (geojsonData && geojsonData.features) {
+                geojsonData.features.forEach(feature => {
+                    const dusunName = feature.properties.NAMOBJ || feature.properties.namobj || feature.properties.NAME;
+                    if (dusunName) {
+                        const option = document.createElement('option');
+                        option.value = dusunName;
+                        option.textContent = dusunName;
+                        select.appendChild(option);
+                    }
+                });
+            }
+        }
+
+        // Normalize column names for flexible CSV parsing
+        function normalizeColumnName(name) {
+            const normalized = name.toLowerCase().trim();
+            const mapping = {
+                'nama': 'nama',
+                'name': 'nama',
+                'dusun': 'dusun',
+                'village': 'dusun',
+                'bb': 'berat_badan',
+                'berat_badan': 'berat_badan',
+                'weight': 'berat_badan',
+                'tb': 'tinggi_badan',
+                'tinggi_badan': 'tinggi_badan',
+                'height': 'tinggi_badan',
+                'sistolik': 'tensi_sistolik',
+                'tensi_sistolik': 'tensi_sistolik',
+                'systolic': 'tensi_sistolik',
+                'diastolik': 'tensi_diastolik',
+                'tensi_diastolik': 'tensi_diastolik',
+                'diastolic': 'tensi_diastolik',
+                'lp': 'lingkar_pinggang',
+                'lingkar_pinggang': 'lingkar_pinggang',
+                'waist': 'lingkar_pinggang'
+            };
+            return mapping[normalized] || normalized;
+        }
+
+        // Normalize data row based on column mapping
+        function normalizeDataRow(row) {
+            const normalized = {};
+            Object.keys(row).forEach(key => {
+                const normalizedKey = normalizeColumnName(key);
+                normalized[normalizedKey] = row[key];
+            });
+            return normalized;
+        }
+
+        // Health calculation functions
+        function calculateBMI(weight, height) {
+            if (!weight || !height || weight <= 0 || height <= 0) {
+                return 0;
+            }
+            const heightInMeters = height / 100;
+            return weight / (heightInMeters * heightInMeters);
+        }
+
+        function isHypertensive(systolic, diastolic) {
+            return systolic >= 140 || diastolic >= 90;
+        }
+
+        function getRiskLevel(bmi, systolic, diastolic) {
+            const hypertensive = isHypertensive(systolic, diastolic);
+            const isOverweight = bmi >= 25;
+            const isObese = bmi >= 30;
+            
+            if (isObese && hypertensive) {
+                return 'Sangat Tinggi';
+            } else if (isOverweight && hypertensive) {
+                return 'Tinggi';
+            } else if (hypertensive || isObese) {
+                return 'Sedang';
+            } else {
+                return 'Rendah';
+            }
+        }
+
+        // Find best matching village name
+        function findBestVillageMatch(dusunName) {
+            if (!dusunName) return null;
+            
+            const cleanDusunName = dusunName.toString().trim();
+            
+            // Exact match
+            if (villagePolygons[cleanDusunName]) {
+                return cleanDusunName;
+            }
+            
+            // Case insensitive match
+            const lowerDusunName = cleanDusunName.toLowerCase();
+            for (const villageName of availableVillages) {
+                if (villageName.toLowerCase() === lowerDusunName) {
+                    return villageName;
+                }
+            }
+            
+            // Partial match
+            for (const villageName of availableVillages) {
+                if (villageName.toLowerCase().includes(lowerDusunName) || 
+                    lowerDusunName.includes(villageName.toLowerCase())) {
+                    return villageName;
+                }
+            }
+            
+            return null;
+        }
+
+        // Process CSV data and match with GeoJSON
+        function processCSVData(data) {
+            const output = {};
+            let matchedCount = 0;
+            let unmatchedVillages = [];
+            
+            data.forEach(row => {
+                const normalizedRow = normalizeDataRow(row);
+                
+                const nama = normalizedRow.nama?.toString().trim() || '';
+                const dusun = normalizedRow.dusun?.toString().trim() || '';
+                const beratBadan = parseFloat(normalizedRow.berat_badan) || 0;
+                const tinggiBadan = parseFloat(normalizedRow.tinggi_badan) || 0;
+                const tensiSistolik = parseFloat(normalizedRow.tensi_sistolik) || 0;
+                const tensiDiastolik = parseFloat(normalizedRow.tensi_diastolik) || 0;
+                
+                if (!nama || !dusun || !beratBadan || !tinggiBadan) {
+                    return;
+                }
+                
+                // Find best matching village
+                const matchedVillage = findBestVillageMatch(dusun);
+                if (!matchedVillage) {
+                    if (!unmatchedVillages.includes(dusun)) {
+                        unmatchedVillages.push(dusun);
+                    }
+                    console.warn(`Dusun "${dusun}" tidak ditemukan dalam GeoJSON`);
+                    return;
+                }
+                
+                const polygonLayer = villagePolygons[matchedVillage];
+                
+                const bmi = calculateBMI(beratBadan, tinggiBadan);
+                const hypertension = isHypertensive(tensiSistolik, tensiDiastolik);
+                const riskLevel = getRiskLevel(bmi, tensiSistolik, tensiDiastolik);
+                
+                if (!output[matchedVillage]) {
+                    // Get centroid of polygon for marker placement
+                    const bounds = polygonLayer.getBounds();
+                    const center = bounds.getCenter();
+                    
+                    output[matchedVillage] = {
+                        name: matchedVillage,
+                        originalName: dusun,
+                        lat: center.lat,
+                        lng: center.lng,
+                        elderlyCount: 0,
+                        hypertensionCount: 0,
+                        totalBMI: 0,
+                        riskCounts: {
+                            'Rendah': 0,
+                            'Sedang': 0,
+                            'Tinggi': 0,
+                            'Sangat Tinggi': 0
+                        },
+                        individuals: [],
+                        polygon: polygonLayer
+                    };
+                    matchedCount++;
+                }
+                
+                const dusunData = output[matchedVillage];
+                
+                dusunData.individuals.push({
+                    nama,
+                    beratBadan,
+                    tinggiBadan,
+                    tensiSistolik,
+                    tensiDiastolik,
+                    bmi: Math.round(bmi * 100) / 100,
+                    hypertension,
+                    riskLevel
+                });
+                
+                dusunData.elderlyCount++;
+                dusunData.totalBMI += bmi;
+                
+                if (hypertension) {
+                    dusunData.hypertensionCount++;
+                }
+                
+                dusunData.riskCounts[riskLevel]++;
+            });
+            
+            // Calculate averages and percentages
+            Object.keys(output).forEach(dusunKey => {
+                const dusunData = output[dusunKey];
+                
+                dusunData.avgBMI = Math.round((dusunData.totalBMI / dusunData.elderlyCount) * 100) / 100;
+                dusunData.hypertensionPercentage = Math.round((dusunData.hypertensionCount / dusunData.elderlyCount) * 100);
+                dusunData.dominantRiskLevel = Object.keys(dusunData.riskCounts).reduce((a, b) => 
+                    dusunData.riskCounts[a] > dusunData.riskCounts[b] ? a : b
+                );
+                
+                dusunData.riskPercentages = {};
+                Object.keys(dusunData.riskCounts).forEach(risk => {
+                    dusunData.riskPercentages[risk] = Math.round((dusunData.riskCounts[risk] / dusunData.elderlyCount) * 100);
+                });
+            });
+            
+            // Log unmatched villages for debugging
+            if (unmatchedVillages.length > 0) {
+                console.warn('Unmatched villages:', unmatchedVillages);
+                console.log('Available villages in GeoJSON:', availableVillages);
+            }
+            
+            return output;
+        }
+
+        // Color mapping for different indicators
+        function getColor(data, indicator) {
+            switch(indicator) {
+                case 'hypertension':
+                    if (data.hypertensionPercentage < 30) return '#2E7D32';
+                    if (data.hypertensionPercentage < 50) return '#FBC02D';
+                    if (data.hypertensionPercentage < 70) return '#F57F17';
+                    return '#D32F2F';
+                case 'avgBMI':
+                    if (data.avgBMI < 18.5) return '#2196F3';
+                    if (data.avgBMI < 25) return '#4CAF50';
+                    if (data.avgBMI < 30) return '#FF9800';
+                    return '#F44336';
+                case 'elderlyCount':
+                    if (data.elderlyCount < 10) return '#E8F5E8';
+                    if (data.elderlyCount < 20) return '#A5D6A7';
+                    if (data.elderlyCount < 30) return '#66BB6A';
+                    return '#2E7D32';
+                case 'riskLevel':
+                    return {
+                        'Rendah': '#2E7D32',
+                        'Sedang': '#FBC02D',
+                        'Tinggi': '#F57F17',
+                        'Sangat Tinggi': '#D32F2F'
+                    }[data.dominantRiskLevel] || '#9E9E9E';
+                default:
+                    return '#2196F3';
+            }
+        }
+
+        // Update map display with GeoJSON integration
+        function updateMapDisplay() {
+            if (!geojsonLayer) {
+                alert('GeoJSON belum dimuat. Silakan tunggu sebentar.');
+                return;
+            }
+
+            const indicator = document.getElementById('indicator').value;
+            const selectedRegion = document.getElementById('region').value;
+            
+            // Reset all polygon styles
+            geojsonLayer.eachLayer(layer => {
+                layer.setStyle({
+                    color: "#3388ff",
+                    weight: 2,
+                    fillOpacity: 0.2,
+                    fillColor: "#3388ff"
+                });
+            });
+            
+            // Update polygons with health data
+            if (processedData && Object.keys(processedData).length > 0) {
+                Object.keys(processedData).forEach(dusunName => {
+                    const data = processedData[dusunName];
+                    const color = getColor(data, indicator);
+                    
+                    if (data.polygon) {
+                        const shouldHighlight = selectedRegion === 'all' || selectedRegion === dusunName;
+                        
+                        data.polygon.setStyle({
+                            color: color,
+                            weight: shouldHighlight ? 3 : 2,
+                            fillOpacity: shouldHighlight ? 0.7 : 0.5,
+                            fillColor: color
+                        });
+                        
+                        // Update popup
+                        const popup = `
+                            <div class='popup-content'>
+                                <div class='popup-title'>${data.name}</div>
+                                <div class='popup-stat'><span>Jumlah Lansia:</span><span>${data.elderlyCount}</span></div>
+                                <div class='popup-stat'><span>Prevalensi Hipertensi:</span><span>${data.hypertensionPercentage}%</span></div>
+                                <div class='popup-stat'><span>Rata-rata BMI:</span><span>${data.avgBMI}</span></div>
+                                <div class='popup-stat'><span>Tingkat Risiko:</span><span>${data.dominantRiskLevel}</span></div>
+                            </div>
+                        `;
+                        data.polygon.bindPopup(popup);
+                    }
+                });
+            }
+            
+            // Zoom to selected region if specified
+            if (selectedRegion !== 'all' && processedData[selectedRegion]) {
+                const data = processedData[selectedRegion];
+                if (data.polygon) {
+                    map.fitBounds(data.polygon.getBounds(), { padding: [20, 20] });
+                }
+            } else {
+                map.fitBounds(geojsonLayer.getBounds());
+            }
+            
+            updateLegend(indicator);
+            updateStatistics();
+        }
+
+        // Update legend
+        function updateLegend(indicator) {
+            const legend = document.querySelector('.legend');
+            legend.innerHTML = '';
+            
+            const title = document.createElement('div');
+            title.className = 'legend-title';
+            legend.appendChild(title);
+            
+            let items = [];
+            
+            if (indicator === 'hypertension') {
+                title.textContent = 'Legenda - Prevalensi Hipertensi';
+                items = [
+                    {c: '#2E7D32', l: 'Rendah (< 30%)'},
+                    {c: '#FBC02D', l: 'Sedang (30-50%)'},
+                    {c: '#F57F17', l: 'Tinggi (50-70%)'},
+                    {c: '#D32F2F', l: 'Sangat Tinggi (> 70%)'}
+                ];
+            } else if (indicator === 'avgBMI') {
+                title.textContent = 'Legenda - Rata-rata BMI';
+                items = [
+                    {c: '#2196F3', l: 'Underweight (< 18.5)'},
+                    {c: '#4CAF50', l: 'Normal (18.5-24.9)'},
+                    {c: '#FF9800', l: 'Overweight (25-29.9)'},
+                    {c: '#F44336', l: 'Obese (≥ 30)'}
+                ];
+            } else if (indicator === 'elderlyCount') {
+                title.textContent = 'Legenda - Jumlah Lansia';
+                items = [
+                    {c: '#E8F5E8', l: 'Sedikit (< 10)'},
+                    {c: '#A5D6A7', l: 'Sedang (10-19)'},
+                    {c: '#66BB6A', l: 'Banyak (20-29)'},
+                    {c: '#2E7D32', l: 'Sangat Banyak (≥ 30)'}
+                ];
+            } else {
+                title.textContent = 'Legenda - Tingkat Risiko';
+                items = [
+                    {c: '#2E7D32', l: 'Rendah'},
+                    {c: '#FBC02D', l: 'Sedang'},
+                    {c: '#F57F17', l: 'Tinggi'},
+                    {c: '#D32F2F', l: 'Sangat Tinggi'}
+                ];
+            }
+            
+            items.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'legend-item';
+                div.innerHTML = `<div class='legend-color' style='background:${item.c};'></div><span>${item.l}</span>`;
+                legend.appendChild(div);
+            });
+        }
+
+        // Update statistics
+        function updateStatistics() {
+            const dusunCount = Object.keys(processedData).length;
+            let totalElderly = 0, totalHypertension = 0, totalBMI = 0, highRiskCount = 0;
+            
+            Object.values(processedData).forEach(data => {
+                totalElderly += data.elderlyCount;
+                totalHypertension += data.hypertensionPercentage;
+                totalBMI += data.avgBMI;
+                if (['Tinggi', 'Sangat Tinggi'].includes(data.dominantRiskLevel)) {
+                    highRiskCount++;
+                }
+            });
+            
+            document.getElementById('totalElderly').textContent = totalElderly;
+            document.getElementById('avgHypertension').textContent = dusunCount > 0 ? (totalHypertension / dusunCount).toFixed(1) + '%' : '0%';
+            document.getElementById('avgBMIStat').textContent = dusunCount > 0 ? (totalBMI / dusunCount).toFixed(1) : '0';
+            document.getElementById('highRiskRegions').textContent = highRiskCount;
+            document.getElementById('mappedVillages').textContent = dusunCount;
+        }
+
+        // File upload handlers
+        function setupFileUpload() {
+            const csvInput = document.getElementById('csvFile');
+            const fileUpload = document.getElementById('fileUpload');
+            
+            fileUpload.addEventListener('dragover', e => {
+                e.preventDefault();
+                fileUpload.classList.add('dragover');
+            });
+            
+            fileUpload.addEventListener('dragleave', () => {
+                fileUpload.classList.remove('dragover');
+            });
+            
+            fileUpload.addEventListener('drop', e => {
+                e.preventDefault();
+                fileUpload.classList.remove('dragover');
+                if (e.dataTransfer.files.length) {
+                    parseCSV(e.dataTransfer.files[0]);
+                }
+            });
+            
+            csvInput.addEventListener('change', e => {
+                if (e.target.files[0]) {
+                    parseCSV(e.target.files[0]);
+                }
+            });
+        }
+
+        // Parse CSV file
+        function parseCSV(file) {
+            const status = document.getElementById('uploadStatus');
+            status.innerHTML = '<div class="upload-status">Memproses file...</div>';
+            
+            Papa.parse(file, {
+                delimiter: ",",
+                header: true,
+                dynamicTyping: true,
+                skipEmptyLines: true,
+                complete: result => {
+                    if (result.errors.length) {
+                        status.innerHTML = `<div class='upload-status error'>Error: ${result.errors[0].message}</div>`;
+                        return;
+                    }
+                    
+                    csvData = result.data;
+                    processedData = processCSVData(csvData);
+                    
+                    const matchedVillages = Object.keys(processedData).length;
+                    const totalDataPoints = csvData.length;
+                    
+                    status.innerHTML = `<div class='upload-status success'>✅ File berhasil diproses! ${totalDataPoints} data lansia dari ${matchedVillages} dusun berhasil dipetakan</div>`;
+                    
+                    updateRegionDropdown();
+                    showPreview();
+                    updateMapDisplay();
+                },
+                error: error => {
+                    status.innerHTML = `<div class='upload-status error'>Error: ${error.message}</div>`;
+                }
+            });
+        }
+
+        // Update region dropdown
+        function updateRegionDropdown() {
+            const select = document.getElementById('region');
+            
+            // Keep "Semua Wilayah" option and add data-matched villages
+            select.innerHTML = '<option value="all">Semua Wilayah</option>';
+            
+            Object.keys(processedData).forEach(dusun => {
+                const option = document.createElement('option');
+                option.value = dusun;
+                option.textContent = `${dusun} (${processedData[dusun].elderlyCount} lansia)`;
+                select.appendChild(option);
+            });
+        }
+
+        // Show data preview
+        function showPreview() {
+            const div = document.getElementById('dataPreview');
+            const table = document.getElementById('previewTable');
+            
+            if (!csvData.length) {
+                div.style.display = 'none';
+                return;
+            }
+            
+            const headers = Object.keys(csvData[0]);
+            let html = '<table><thead><tr>';
+            headers.forEach(header => html += `<th>${header}</th>`);
+            html += '</tr></thead><tbody>';
+            
+            csvData.slice(0, 10).forEach(row => {
+                html += '<tr>';
+                headers.forEach(header => html += `<td>${row[header] ?? ''}</td>`);
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            table.innerHTML = html;
+            div.style.display = 'block';
+        }
+
+        // Export data function
+        function exportData() {
+            if (!processedData || Object.keys(processedData).length === 0) {
+                alert('Tidak ada data untuk diexport');
+                return;
+            }
+            
+            const csv = Papa.unparse(Object.values(processedData));
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'data_kesehatan_lansia.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            setupFileUpload();
+        });
+    </script>
+</body>
+</html>
